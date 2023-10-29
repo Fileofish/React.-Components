@@ -1,35 +1,85 @@
-import { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
-import './App.css';
+import React, { Component } from 'react';
+import Search from './components/Search';
+import Results from './components/Results';
+import ErrorBoundary from './components/ErrorBoundary';
 
-function App() {
-  const [count, setCount] = useState(0);
+interface PokemonAbility {
+  ability: {
+    name: string;
+    url: string;
+  };
+  is_hidden: boolean;
+  slot: number;
+}
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+interface PokemonData {
+  name: string;
+  base_experience: number;
+  height: number;
+  id: number;
+  order: number;
+  weight: number;
+  abilities: PokemonAbility[];
+}
+
+interface AppState {
+  data: PokemonData | null;
+  isLoading: boolean;
+}
+
+class App extends Component<Record<string, never>, AppState> {
+  state: AppState = {
+    data: null,
+    isLoading: true,
+  };
+
+  handleSearchSubmit = (term: string) => {
+    this.setState({ isLoading: true });
+
+    fetch(`https://pokeapi.co/api/v2/pokemon/${term}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        this.setState({
+          data: data,
+          isLoading: false,
+        });
+      })
+      .catch((error) => {
+        console.error('Error fetching data:', error);
+        this.setState({ isLoading: false });
+      });
+  };
+
+  render() {
+    const { data, isLoading } = this.state;
+
+    const items = data
+      ? [
+          {
+            name: data.name,
+            description: `Experience: ${data.base_experience}, Height: ${data.height}, Weight: ${data.weight}`,
+          },
+        ]
+      : [];
+
+    return (
+      <div className="main-content">
+        <ErrorBoundary>
+          <div className="search-section">
+            <Search onSearchSubmit={this.handleSearchSubmit} />
+          </div>
+          <div className="results-section">
+            {isLoading ? <div>Loading...</div> : <Results items={items} />}
+          </div>
+        </ErrorBoundary>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  );
+    );
+  }
 }
 
 export default App;
